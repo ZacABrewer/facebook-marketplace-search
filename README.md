@@ -8,6 +8,23 @@ a listing meets your rules.
 
 The UI is deliberately minimal: white, light-gray accents, no clutter.
 
+## Try it without installing anything
+
+- **Browser demo on GitHub Pages:** <https://zacabrewer.github.io/facebook-marketplace-search/>
+  The full UI running on generated listings, entirely in your browser. Nothing is fetched from
+  Facebook and there is no photo cross-check; tracked items and alerts persist in your browser's
+  local storage. It deploys automatically from `main` once GitHub Pages is enabled
+  (repo **Settings → Pages → Source: GitHub Actions**).
+- **Full app in GitHub Codespaces:**
+  [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ZacABrewer/facebook-marketplace-search)
+  One click builds the project, installs Chromium for Playwright and starts the server on a
+  forwarded port. Set `SOURCE=facebook`, `FB_COOKIES` and `ANTHROPIC_API_KEY` as Codespaces
+  secrets to use real listings and the Claude cross-check from there.
+
+GitHub Pages can only host static files, so the scraper, the scheduler that runs tracked items in
+the background, and the Claude cross-check need the Node server (locally, in Codespaces, or on any
+small host).
+
 ## Features
 
 - **Search with cross-checking.** Type an item; results are scored for relevance. Accessories, parts,
@@ -93,6 +110,16 @@ web/      React + Vite frontend (Leaflet map, pages for search, map, price group
 ```
 
 Useful scripts: `npm test` (server unit tests), `npm run typecheck`, `npm run build`.
+
+Static demo build (what the Pages workflow produces):
+
+```bash
+VITE_STATIC_DEMO=true BASE_PATH=/facebook-marketplace-search/ npm run build --workspace=web
+```
+
+The web app talks to `/api/*`; with `VITE_STATIC_DEMO=true` those calls are answered in the
+browser by `web/src/demo/mockApi.ts`, which reuses the server's demo generator, keyword scorer and
+filtering code.
 
 ## API overview
 

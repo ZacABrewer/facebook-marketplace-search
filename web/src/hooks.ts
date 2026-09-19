@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_FILTERS, type SearchContext } from "./types";
+import { demoEvents, isStaticDemo } from "./demo/mockApi";
 
 const CTX_KEY = "fbms.searchContext";
 
@@ -47,6 +48,14 @@ export function useSse(handler: SseHandler): void {
   const ref = useRef(handler);
   ref.current = handler;
   useEffect(() => {
+    if (isStaticDemo) {
+      const names = ["job", "listings", "relevance", "notification", "watch"];
+      const hs = names.map((n) => [n, (p: unknown) => ref.current(n, p)] as const);
+      for (const [n, h] of hs) demoEvents.on(n, h);
+      return () => {
+        for (const [n, h] of hs) demoEvents.off(n, h);
+      };
+    }
     let es: EventSource | null = null;
     let closed = false;
     let retry = 1000;

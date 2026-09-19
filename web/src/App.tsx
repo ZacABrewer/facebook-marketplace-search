@@ -166,6 +166,13 @@ export function App() {
             </span>
           )}
         </header>
+        {settings?.staticDemo && (
+          <div className="banner">
+            Browser-only demo with generated listings: searches, filters, the map, price groups, tracked items and alerts all work, but
+            nothing is fetched from Facebook and there is no photo cross-check. Run the server for real data —{" "}
+            <a href="https://github.com/ZacABrewer/facebook-marketplace-search#quick-start" target="_blank" rel="noreferrer">see the README</a>.
+          </div>
+        )}
         <main className="main">{page}</main>
         {toastMsg && <div className="toast">{toastMsg}</div>}
       </div>

@@ -1,7 +1,8 @@
 import type { Filters, Job, Listing, Notification, PriceGroup, SearchContext, Settings, Watch } from "./types";
+import { demoFetch, isStaticDemo } from "./demo/mockApi";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
+  const res = isStaticDemo ? await demoFetch(url, init) : await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {

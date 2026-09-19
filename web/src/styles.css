@@ -42,6 +42,7 @@ h3 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; lette
 .nav a.active { background: var(--bg-hover); color: var(--text); }
 .badge-count { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; text-align: center; line-height: 18px; }
 .main { flex: 1; display: flex; flex-direction: column; }
+.banner { padding: 8px 20px; background: var(--bg-soft); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
 .page { padding: 20px; max-width: 1400px; width: 100%; margin: 0 auto; }
 .page.full { max-width: none; padding: 0; }
 

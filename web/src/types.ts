@@ -105,6 +105,7 @@ export interface Settings {
   claudeModel: string;
   facebookCookiesConfigured: boolean;
   priceGroups: PriceGroup[];
+  staticDemo?: boolean;
 }
 
 export type SortKey = "relevance" | "price_asc" | "price_desc" | "distance" | "newest" | "recently_seen";
