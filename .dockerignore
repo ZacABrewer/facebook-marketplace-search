@@ -1,0 +1,19 @@
+# Keep the build context small and never ship secrets or host build output.
+node_modules
+**/node_modules
+dist
+**/dist
+server/data
+data
+.git
+.github
+.devcontainer
+.env
+.env.*
+!.env.example
+*.log
+*.sqlite
+*.sqlite-*
+cookies.json
+cookies.txt
+.DS_Store
