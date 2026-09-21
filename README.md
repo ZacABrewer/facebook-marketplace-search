@@ -49,7 +49,11 @@ small host).
 
 ## Quick start
 
-Requires Node.js 22.13 or newer (the built-in SQLite driver is used, so there is nothing to compile).
+**Running it on a server or NAS? Skip to [Run on a NAS with Docker](#run-on-a-nas-with-docker)** —
+one `docker compose up -d --build` and you are done.
+
+To run it directly, you need Node.js 22.13 or newer (the built-in SQLite driver is used, so there is
+nothing to compile).
 
 ```bash
 npm install
@@ -99,8 +103,142 @@ its detail view.
 
 ## Configuration
 
-All configuration is through environment variables; see [`.env.example`](.env.example).
-Home location, radius and alert delivery are set in the app's Settings page and stored in SQLite.
+All configuration is through environment variables; see [`.env.example`](.env.example) for the full
+annotated list, or the table in the [Docker section](#environment-variables). Home location, radius
+and alert delivery are set in the app's Settings page and stored in SQLite.
+
+## Run on a NAS with Docker
+
+The image bundles the API, the built web UI and (optionally) Chromium for
+scraping. Everything persists in one volume: `/data`.
+
+### 1. Get the files onto the NAS
+
+```bash
+git clone https://github.com/ZacABrewer/facebook-marketplace-search.git
+cd facebook-marketplace-search
+cp .env.example .env      # then edit .env
+```
+
+### 2. Start it
+
+```bash
+mkdir -p data
+docker compose up -d --build
+```
+
+First build takes several minutes: it compiles the app and downloads Chromium
+plus its system libraries. Open `http://<nas-ip>:4310`, then set your home
+location under **Settings**.
+
+Useful commands:
+
+```bash
+docker compose logs -f          # follow logs
+docker compose restart          # restart
+docker compose down             # stop and remove the container
+docker compose up -d --build    # rebuild after a git pull
+```
+
+### 3. Switch on real Facebook data
+
+Demo mode needs no setup and works offline. For real listings:
+
+1. Export cookies from a browser logged in to Facebook (any "cookies.txt" or
+   "EditThisCookie" style extension; JSON or Netscape format both work).
+2. Save the file next to `docker-compose.yml` as `cookies.json`.
+3. Uncomment the cookies volume and `FB_COOKIES` lines in `docker-compose.yml`,
+   and set `SOURCE=facebook` in `.env`.
+4. `docker compose up -d`
+
+Without cookies Facebook usually shows a login wall and returns few or no
+results.
+
+### Image variants
+
+| Build | Command | Size | Scraping |
+|---|---|---|---|
+| Full | `docker compose up -d --build` | ~1.2 GB | yes |
+| Demo only | `docker build --build-arg INSTALL_CHROMIUM=false -t marketplace-search:demo .` | ~250 MB | no |
+
+The demo image has no Chromium, so it only runs `SOURCE=demo`.
+
+### Environment variables
+
+| Variable | Default in image | Purpose |
+|---|---|---|
+| `SOURCE` | `demo` | `demo` or `facebook` |
+| `FB_COOKIES` | empty | Path **inside the container** to your cookies file |
+| `ANTHROPIC_API_KEY` | empty | Enables the Claude photo cross-check |
+| `VERIFY_MODE` | `ambiguous` | `ambiguous`, `all` or `off` |
+| `AUTH_USER` / `AUTH_PASS` | empty | Set both to require HTTP basic auth |
+| `DATA_DIR` | `/data` | SQLite database location |
+| `HOST` / `PORT` | `0.0.0.0` / `4310` | Listen address |
+| `TZ` | unset | Timezone for alert timestamps |
+| `SCHEDULER_TICK_SECONDS` | `60` | How often due tracked items are checked |
+
+Full list with comments: [`.env.example`](.env.example).
+
+### Storage
+
+`/data` holds `marketplace.sqlite` and your settings, tracked items and alerts.
+Back up that folder and you have backed up everything.
+
+Keep it on the NAS's **internal disk**, not an SMB or NFS share. SQLite's
+locking is unreliable over network mounts and will eventually corrupt the
+database.
+
+### Security
+
+The app has **no login by default** and the API can read your Anthropic key's
+budget and your saved searches. Before exposing it beyond your own machine:
+
+- Set `AUTH_USER` and `AUTH_PASS` in `.env` to require HTTP basic auth.
+- Keep it on your LAN. If you want it remotely, reach it over a VPN
+  (WireGuard/Tailscale) or put it behind a reverse proxy that terminates HTTPS.
+  Basic auth over plain HTTP sends the password in reversible encoding on every
+  request, so it is only meaningful behind TLS or on a trusted network.
+
+`/api/health` stays reachable without credentials so Docker's health check
+works; it returns no listing or account data.
+
+### Synology / QNAP notes
+
+- **Synology**: install "Container Manager", then either use its Project
+  feature pointed at this folder's `docker-compose.yml`, or run the commands
+  above over SSH. SSH is enabled under Control Panel → Terminal & SNMP.
+- **QNAP**: Container Station supports compose files under "Applications".
+- Both run Docker as root, so `./data` normally just works. If the container
+  exits with a `Cannot write to DATA_DIR` error, the mounted folder is owned by
+  another user. Fix it either way:
+
+  ```bash
+  sudo chown -R 1000:1000 ./data     # give it to the container's user
+  ```
+
+  or uncomment `user:` in `docker-compose.yml` and set it to your own
+  `id -u`:`id -g`.
+- On ARM-based models the build works the same; Chromium has an arm64 build.
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Your `/data` volume is untouched, so tracked items and alerts survive updates.
+
+### Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| Container restarts with `Cannot write to DATA_DIR` | Volume permissions — see the chown command above |
+| `http://<nas-ip>:4310` refuses to connect | Another service holds port 4310. Change the host side of `ports:` to e.g. `8410:4310` |
+| Chromium crashes or pages time out | Raise `shm_size` in `docker-compose.yml`; 1 GB is the default here |
+| Facebook returns nothing in `facebook` mode | Cookies missing or stale. Re-export them and restart |
+| Photo cross-check shows "off" in Settings | `ANTHROPIC_API_KEY` is not reaching the container. Check `.env` and `docker compose config` |
+| Alerts never fire | Tracked items run on their own interval; use "Run now" on the Tracked page to test |
 
 ## Project layout
 

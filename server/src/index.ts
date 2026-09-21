@@ -3,7 +3,8 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import fs from "node:fs";
 import path from "node:path";
-import { config, hasClaudeCredentials } from "./config.js";
+import { authEnabled, config, hasClaudeCredentials } from "./config.js";
+import { registerAuth } from "./auth.js";
 import { getDb } from "./db.js";
 import { apiRoutes } from "./routes/api.js";
 import { startScheduler, stopScheduler } from "./watches.js";
@@ -13,6 +14,7 @@ async function main(): Promise<void> {
   getDb();
   const app = Fastify({ logger: { level: "info" } });
   await app.register(cors, { origin: true });
+  registerAuth(app);
   await app.register(apiRoutes);
 
   if (fs.existsSync(path.join(config.webDist, "index.html"))) {
@@ -33,7 +35,9 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: config.host });
-  app.log.info(`source=${config.source} verify=${config.verifyMode} claude=${hasClaudeCredentials() ? "configured" : "not configured"}`);
+  app.log.info(
+    `source=${config.source} verify=${config.verifyMode} claude=${hasClaudeCredentials() ? "configured" : "not configured"} auth=${authEnabled() ? "basic" : "off"}`,
+  );
   startScheduler();
 
   const shutdown = async () => {

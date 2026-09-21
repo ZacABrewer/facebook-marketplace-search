@@ -23,6 +23,14 @@ export const config = {
   /** Chromium executable override for Playwright (leave empty to use Playwright's own browser). */
   chromiumPath: env("CHROMIUM_PATH", ""),
   headless: env("HEADLESS", "true") !== "false",
+  /**
+   * Chromium's setuid sandbox cannot start in most containers. The Docker image
+   * sets this to "true"; leave it off when running directly on a desktop.
+   */
+  chromiumNoSandbox: env("CHROMIUM_NO_SANDBOX", "false") === "true",
+  /** Optional HTTP basic auth. Both must be set for auth to be enforced. */
+  authUser: env("AUTH_USER", ""),
+  authPass: env("AUTH_PASS", ""),
   /** Claude model used for the photo + description cross-check. */
   claudeModel: env("CLAUDE_MODEL", "claude-opus-5"),
   /** "ambiguous" checks only listings the keyword scorer is unsure about, "all" checks everything, "off" disables. */
@@ -37,6 +45,21 @@ export function hasClaudeCredentials(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
+export function authEnabled(): boolean {
+  return Boolean(config.authUser && config.authPass);
+}
+
 export function ensureDataDir(): void {
-  fs.mkdirSync(config.dataDir, { recursive: true });
+  try {
+    fs.mkdirSync(config.dataDir, { recursive: true });
+    fs.accessSync(config.dataDir, fs.constants.W_OK);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    throw new Error(
+      `Cannot write to DATA_DIR "${config.dataDir}" (${code ?? "error"}). ` +
+        "In Docker this usually means the mounted volume is owned by a different user: " +
+        "either chown the host folder to the container's user, or set the container's user to match it " +
+        "(see the Docker section of the README).",
+    );
+  }
 }

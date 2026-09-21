@@ -23,10 +23,16 @@ let browser: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (browser && browser.isConnected()) return browser;
+  const args = ["--disable-blink-features=AutomationControlled"];
+  if (config.chromiumNoSandbox) {
+    // Containers rarely allow Chromium's setuid sandbox, and the default 64 MB
+    // /dev/shm makes it crash on image-heavy pages.
+    args.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
+  }
   browser = await chromium.launch({
     headless: config.headless,
     executablePath: config.chromiumPath || undefined,
-    args: ["--disable-blink-features=AutomationControlled"],
+    args,
   });
   return browser;
 }

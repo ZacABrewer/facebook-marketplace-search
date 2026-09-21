@@ -1,0 +1,62 @@
+services:
+  marketplace-search:
+    # Build from this folder. To use a prebuilt image instead, replace
+    # `build: .` with `image: ghcr.io/<you>/marketplace-search:latest`.
+    build:
+      context: .
+      args:
+        # false = skip Chromium for a much smaller, demo-only image
+        INSTALL_CHROMIUM: "true"
+    image: marketplace-search:latest
+    container_name: marketplace-search
+    restart: unless-stopped
+
+    # Reap zombie Chromium processes.
+    init: true
+    # Chromium needs more than Docker's default 64 MB of shared memory.
+    shm_size: "1gb"
+
+    ports:
+      # host:container — change the host port if 4310 is taken on your NAS.
+      - "4310:4310"
+
+    volumes:
+      # SQLite database and settings. Use a folder on the NAS's internal disk,
+      # not an SMB/NFS share: SQLite locking is unreliable over network mounts.
+      - ./data:/data
+      # Optional: cookies exported from a logged-in Facebook session.
+      # - ./cookies.json:/config/cookies.json:ro
+
+    environment:
+      TZ: "America/New_York"
+
+      # demo = generated listings, works offline. facebook = real scraping.
+      SOURCE: "demo"
+
+      # Uncomment once cookies.json is mounted above.
+      # FB_COOKIES: "/config/cookies.json"
+
+      # Photo cross-check with Claude. Leave unset for keyword-only matching.
+      # Prefer putting the key in a .env file next to this compose file.
+      # ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      # VERIFY_MODE: "ambiguous"   # ambiguous | all | off
+
+      # Strongly recommended if anything other than you can reach this port.
+      # AUTH_USER: "${AUTH_USER:-}"
+      # AUTH_PASS: "${AUTH_PASS:-}"
+
+    # The container runs as uid 1000. If ./data ends up root-owned or
+    # unwritable, either `chown -R 1000:1000 ./data` on the host, or set the
+    # user here to match the folder's owner (`id -u` / `id -g` on the NAS).
+    # user: "1000:1000"
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4310/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
