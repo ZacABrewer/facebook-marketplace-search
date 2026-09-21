@@ -1,7 +1,21 @@
 node_modules/
 dist/
 data/
-.env
-*.log
-.DS_Store
 server/data/
+
+# Local config. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# An exported Facebook session is account-level access — never commit one.
+# The README puts cookies.json in this folder, so keep it ignored.
+cookies.json
+cookies.txt
+cookies*.json
+*.cookies
+
+*.log
+*.sqlite
+*.sqlite-*
+.DS_Store
